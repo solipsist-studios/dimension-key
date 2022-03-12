@@ -2,20 +2,30 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum AttachmentType
+{
+    Hook,
+    Loop
+}
+
 public class AttachmentPoint : MonoBehaviour
 {
+    // Unity accessible data
+    public AttachmentType attachmentType;
+
+    // Other data members
+    public AttachableObject surface { get; set; }
     public List<AttachmentPoint> collidingAttachmentPoints { get; private set; } = new List<AttachmentPoint>();
+    public AttachmentPoint attachedPoint { get; private set; }
 
-    public AttachSurface surface { get; set; }
-
-    void Start()
+    protected void Attach(AttachmentPoint other)
     {
-        
+
     }
 
-    void Update()
+    protected void Detach()
     {
-        
+
     }
 
     private void OnTriggerEnter(Collider other)
@@ -26,7 +36,7 @@ public class AttachmentPoint : MonoBehaviour
             return;
         }
 
-        if (surface.state == AttachSurfaceState.Attached)
+        if (surface.state == AttachableObjectState.Attached)
         {
             // Something is being attached TO this.
             return;
@@ -49,7 +59,7 @@ public class AttachmentPoint : MonoBehaviour
             return;
         }
 
-        if (surface.state == AttachSurfaceState.Attached)
+        if (surface.state == AttachableObjectState.Attached)
         {
             // Something is being attached TO this.
             return;

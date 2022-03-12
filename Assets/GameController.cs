@@ -1,42 +1,50 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Web;
 using UnityEngine;
 
+using Random = UnityEngine.Random;
+
 public class GameController : MonoBehaviour
 {
-    public List<GameObject> keyObjects = new List<GameObject>();
-    public List<int> availableKeys = new List<int>();
-
-    private readonly Dictionary<string, string> keyParams = new Dictionary<string, string>()
+    // Constants
+    private const int KEY_COUNT = 4;
+    private readonly Dictionary<string, string> keyParams = new Dictionary<string, string>(KEY_COUNT)
     {
         { "w", "%E1%92%A5%E1%90%A6%E1%91%B3%E1%90%A7%E1%90%A4" },
         { "s", "%E1%90%85%E1%93%B4%E1%90%8A%E1%90%A7%E1%90%A4" },
         { "e", "%E1%90%8B%E1%90%A7%E1%90%B1%E1%90%A2%E1%91%B3%E1%90%A4" },
         { "n", "%E1%90%8A%E1%90%A2%E1%91%AD%E1%90%A6%E1%91%95%E1%91%B3%E1%90%A7%E1%90%A4" }
     };
+    private readonly string[] directions = new string[KEY_COUNT] { "w", "s", "e", "n" };
 
-    // Awake is called before start
+    // Unity accessible data
+    public string debugQueryString;
+    public List<AttachableObject> keyObjects = new List<AttachableObject>(KEY_COUNT);
+    public MeshRenderer buttonMesh;
+    public List<Material> keyMaterials = new List<Material>(KEY_COUNT);
+    public Transform spawnPoint;
+
+    // Other member data
+    private List<int> availableKeys = new List<int>();
+
     private void Awake()
     {
-        foreach (var key in this.availableKeys)
+        foreach (var keyObj in this.keyObjects)
         {
-            this.keyObjects[key].SetActive(false);
+            keyObj.gameObject.SetActive(false);
         }
     }
 
-    // Start is called before the first frame update
     private void Start()
     {
 #if UNITY_EDITOR
-        foreach (var key in this.availableKeys)
-        {
-            this.keyObjects[key].SetActive(true);
-        }
-#endif
-
+        string queryString = this.debugQueryString;
+#else
         string queryString = Application.absoluteURL;
+#endif
         
         if (string.IsNullOrEmpty(queryString) || !queryString.Contains("?"))
         {
@@ -46,20 +54,47 @@ public class GameController : MonoBehaviour
         Debug.Log(string.Format("Application URL: {0}", queryString));
 
         var queryKeyValueParams = HttpUtility.ParseQueryString(queryString.Substring(queryString.IndexOf('?')));
-        int keyIndex = 0;
+        bool matAssigned = false;
         foreach (var keyVal in this.keyParams)
         {
             if (!string.IsNullOrEmpty(queryKeyValueParams.Get(keyVal.Key)))
             {
                 string param = queryKeyValueParams[keyVal.Key];
                 string encodedVal = HttpUtility.UrlEncode(param, Encoding.UTF8);
+                int dirIndex = Array.IndexOf(this.directions, keyVal.Key);
+
                 if (encodedVal != null && encodedVal.ToUpper() == keyVal.Value)
                 {
-                    this.keyObjects[keyIndex].SetActive(true);
+                    this.availableKeys.Add(dirIndex);
+                }
+
+                // Set the button color to the 0th element in the query params
+                if (!matAssigned)
+                {
+                    this.buttonMesh.material = this.keyMaterials[dirIndex];
+                    matAssigned = true;
                 }
             }
-
-            keyIndex++;
         }
+    }
+
+    private void Reset()
+    {
+        foreach (var key in this.availableKeys)
+        {
+            var keyObj = this.keyObjects[key];
+            keyObj.Detach();
+            keyObj.gameObject.SetActive(true);
+            keyObj.transform.position = this.spawnPoint.position;
+            keyObj.transform.rotation = Random.rotation;
+            
+            var physObj = keyObj.GetComponent<Rigidbody>();
+            physObj.velocity = Vector3.zero;
+        }
+    }
+
+    public void OnResetButtonPressed()
+    {
+        Reset();
     }
 }
