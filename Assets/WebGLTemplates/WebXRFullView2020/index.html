@@ -22,13 +22,65 @@
       </div>
       <div id="unity-footer">
         <div id="unity-webgl-logo"></div>
-        <button id="entervr" value="Enter VR" disabled>VR</button>
         <button id="enterar" value="Enter AR" disabled>AR</button>
         <div id="unity-webxr-link">Using <a href="https://github.com/De-Panther/unity-webxr-export" target="_blank" title="WebXR Export">WebXR Export</a></div>
         <div id="unity-build-title">{{{ PRODUCT_NAME }}}</div>
       </div>
     </div>
     <script>
+      var keys = ["w", "s", "e", "n"];
+
+      function setCookie(cname, cvalue, exdays = 365) {
+        const d = new Date();
+        d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+        let expires = "expires=" + d.toUTCString();
+        document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+      }
+
+      function getCookie(cname) {
+        let name = cname + "=";
+        let decodedCookie = decodeURIComponent(document.cookie);
+        let ca = decodedCookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+          let c = ca[i];
+          while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+          }
+          if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+          }
+        }
+        return "";
+      }
+
+      function checkCookies() {
+        let urlParams = new URLSearchParams(window.location.search);
+        let needsReload = false;
+
+        keys.forEach(key => {
+          let hasParam = false;
+          if (urlParams.has(key)) {
+            setCookie(key, urlParams.get(key));
+            hasParam = true;
+          }
+
+          let cval = getCookie(key);
+
+          if (cval != "") {
+            urlParams.set(key, cval);
+            if (!hasParam) {
+              needsReload = true;
+            }
+          }
+        });
+
+        if (needsReload) {
+          window.location.search = urlParams;
+        }
+      }
+
+      checkCookies();
+
       var buildUrl = "Build";
       var loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
       var config = {
@@ -82,20 +134,13 @@
       document.body.appendChild(script);
 
       let enterARButton = document.getElementById('enterar');
-      let enterVRButton = document.getElementById('entervr');
 
       document.addEventListener('onARSupportedCheck', function (event) {
         enterARButton.disabled = !event.detail.supported;
       }, false);
-      document.addEventListener('onVRSupportedCheck', function (event) {
-        enterVRButton.disabled = !event.detail.supported;
-      }, false);
 
       enterARButton.addEventListener('click', function (event) {
         unityInstance.Module.WebXR.toggleAR();
-      }, false);
-      enterVRButton.addEventListener('click', function (event) {
-        unityInstance.Module.WebXR.toggleVR();
       }, false);
     </script>
   </body>

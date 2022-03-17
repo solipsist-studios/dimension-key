@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Web;
 using UnityEngine;
+using UnityEngine.UI;
+using WebXR;
 
 using Random = UnityEngine.Random;
 
@@ -26,12 +28,34 @@ public class GameController : MonoBehaviour
     public MeshRenderer buttonMesh;
     public List<Material> keyMaterials = new List<Material>(KEY_COUNT);
     public Transform spawnPoint;
+    public Button enterARButton;
+    public GameObject unsupportedText;
 
     // Other member data
     private List<int> availableKeys = new List<int>();
 
+    private GameController()
+    {
+        //WebXRManager.OnXRCapabilitiesUpdate += WebXRManager_OnXRCapabilitiesUpdate;
+        
+    }
+
+    //private void WebXRManager_OnXRCapabilitiesUpdate(WebXRDisplayCapabilities capabilities)
+    //{
+    //    enterARButton.SetActive(capabilities.canPresentAR);
+    //    unsupportedText.SetActive(!capabilities.canPresentAR);
+    //}
+
+    public void OnEnterARClicked()
+    {
+        WebXRManager.Instance.ToggleAR();
+        enterARButton.gameObject.SetActive(false);
+    }
+
     private void Awake()
     {
+        
+
         foreach (var keyObj in this.keyObjects)
         {
             keyObj.gameObject.SetActive(false);
@@ -40,6 +64,20 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
+        try
+        {
+            enterARButton.gameObject.SetActive(WebXRManager.Instance.isSupportedAR);
+            unsupportedText.SetActive(!WebXRManager.Instance.isSupportedAR);
+
+            enterARButton.onClick.Invoke();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+            enterARButton.gameObject.SetActive(false);
+            unsupportedText.SetActive(true);
+        }
+
 #if UNITY_EDITOR
         string queryString = this.debugQueryString;
 #else

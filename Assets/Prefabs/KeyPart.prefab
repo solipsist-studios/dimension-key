@@ -498,6 +498,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f48417e1ed3a4ed449dc84684be903bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  offset: {x: 0, y: 0, z: 0}
 --- !u!114 &2581225399471469258
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -598,6 +599,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: LEGO-2X4-L_simple v2
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 048a03c26dd6a264ba8810bb19250732,
+        type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1677675763075263951, guid: 048a03c26dd6a264ba8810bb19250732,
+        type: 3}
+      propertyPath: m_Layer
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 048a03c26dd6a264ba8810bb19250732, type: 3}
