@@ -57,7 +57,8 @@ public class GameController : MonoBehaviour
     private void KeyObj_OnAttached(object sender, AttachmentPoint attachPoint)
     {
         // Update combination status
-        this.m_attachedKeys.Add((AttachableObject)sender);
+        var key = (AttachableObject)sender;
+        this.m_attachedKeys.Add(key);
 
         CheckKeyConfiguration();
     }
@@ -91,7 +92,7 @@ public class GameController : MonoBehaviour
 
     private void CheckKeyConfiguration()
     {
-        const int layerMask = ~((1 << 1) | (1 << 2)); // !TransparentFX layer || IgnoreRaycast Layer
+        const int locksLayerMask = 1 << 3; // Collide only with the "Locks" layer
         const string strLockPrefix = "LockPart";
         const float keyEpsilon = 0.02069999f;
 
@@ -140,7 +141,7 @@ public class GameController : MonoBehaviour
 
             // Project down to see if we hit the correct Lock tile
             RaycastHit rayHit;
-            if (!Physics.Raycast(adjPoint.transform.position + (Vector3.up * keyEpsilon), Vector3.down, out rayHit, 1.0f, layerMask) ||
+            if (!Physics.Raycast(adjPoint.transform.position + (Vector3.up * keyEpsilon), Vector3.down, out rayHit, 1.0f, locksLayerMask) ||
                 !rayHit.collider.name.StartsWith(strLockPrefix))
             {
                 continue;
@@ -152,12 +153,11 @@ public class GameController : MonoBehaviour
             {
                 initialLockObj.GetComponentInChildren<MeshRenderer>().material = this.successMaterial;
             }
-            else if (i + offset == lockIdx)
+            else if (i + offset == lockIdx || (i + offset) % KEY_COUNT == lockIdx)
             {
                 // This is the correct orientation, so update the tile
                 rayHit.collider.GetComponentInChildren<MeshRenderer>().material = this.successMaterial;
             }
-
         }
     }
 
@@ -167,8 +167,6 @@ public class GameController : MonoBehaviour
         {
             enterARButton.gameObject.SetActive(WebXRManager.Instance.isSupportedAR);
             unsupportedText.SetActive(!WebXRManager.Instance.isSupportedAR);
-
-            //enterARButton.onClick.Invoke();
         }
         catch (Exception ex)
         {

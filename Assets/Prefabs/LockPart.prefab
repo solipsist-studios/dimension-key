@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 314455198699704156}
   - component: {fileID: 4037864989672141514}
   - component: {fileID: 1738968230900534621}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: MeshBody1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -200,7 +200,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1525258880701372713}
   - component: {fileID: 1342204233336389325}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: LockPart
   m_TagString: Untagged
   m_Icon: {fileID: 0}

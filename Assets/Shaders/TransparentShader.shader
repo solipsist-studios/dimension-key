@@ -10,7 +10,7 @@
         Tags { 
             "RenderPipeline" = "UniversalPipeline" 
             "UniversalMaterialType" = "Lit" 
-            "Queue" = "AlphaTest+51" 
+            "Queue" = "AlphaTest" 
             "IgnoreProjector" = "True" 
             "RenderType" = "TransparentCutout" 
         }
