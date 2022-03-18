@@ -14,29 +14,36 @@ public class AttachmentPoint : MonoBehaviour
     public AttachmentType attachmentType;
 
     // Other data members
-    public AttachableObject surface { get; set; }
+    public AttachableObject parentObject { get; set; }
     public List<AttachmentPoint> collidingAttachmentPoints { get; private set; } = new List<AttachmentPoint>();
     public AttachmentPoint attachedPoint { get; private set; }
-
-    protected void Attach(AttachmentPoint other)
+    public bool isAttached
     {
-
+        get
+        {
+            return this.attachedPoint != null;
+        }
     }
 
-    protected void Detach()
+    public void Attach(AttachmentPoint other)
     {
+        this.attachedPoint = other;
+    }
 
+    public void Detach()
+    {
+        this.attachedPoint = null;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (surface == null)
+        if (parentObject == null)
         {
             // Log initialization failure
             return;
         }
 
-        if (surface.state == AttachableObjectState.Attached)
+        if (parentObject.state == AttachableObjectState.Attached)
         {
             // Something is being attached TO this.
             return;
@@ -53,13 +60,13 @@ public class AttachmentPoint : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (surface == null)
+        if (parentObject == null)
         {
             // Log initialization failure
             return;
         }
 
-        if (surface.state == AttachableObjectState.Attached)
+        if (parentObject.state == AttachableObjectState.Attached)
         {
             // Something is being attached TO this.
             return;

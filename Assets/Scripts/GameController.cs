@@ -22,29 +22,21 @@ public class GameController : MonoBehaviour
     };
     private readonly string[] directions = new string[KEY_COUNT] { "w", "s", "e", "n" };
 
+    // Other member data
+    private List<int> m_availableKeys = new List<int>();
+    private List<AttachableObject> m_attachedKeys = new List<AttachableObject>(KEY_COUNT);
+
     // Unity accessible data
     public string debugQueryString;
     public List<AttachableObject> keyObjects = new List<AttachableObject>(KEY_COUNT);
+    public List<GameObject> lockObjects = new List<GameObject>(KEY_COUNT);
     public MeshRenderer buttonMesh;
     public List<Material> keyMaterials = new List<Material>(KEY_COUNT);
+    public Material successMaterial;
+    public Material neutralMaterial;
     public Transform spawnPoint;
     public Button enterARButton;
     public GameObject unsupportedText;
-
-    // Other member data
-    private List<int> availableKeys = new List<int>();
-
-    private GameController()
-    {
-        //WebXRManager.OnXRCapabilitiesUpdate += WebXRManager_OnXRCapabilitiesUpdate;
-        
-    }
-
-    //private void WebXRManager_OnXRCapabilitiesUpdate(WebXRDisplayCapabilities capabilities)
-    //{
-    //    enterARButton.SetActive(capabilities.canPresentAR);
-    //    unsupportedText.SetActive(!capabilities.canPresentAR);
-    //}
 
     public void OnEnterARClicked()
     {
@@ -54,11 +46,118 @@ public class GameController : MonoBehaviour
 
     private void Awake()
     {
-        
-
         foreach (var keyObj in this.keyObjects)
         {
+            keyObj.OnAttached += KeyObj_OnAttached;
+            keyObj.OnDetached += KeyObj_OnDetached;
             keyObj.gameObject.SetActive(false);
+        }
+    }
+
+    private void KeyObj_OnAttached(object sender, AttachmentPoint attachPoint)
+    {
+        // Update combination status
+        this.m_attachedKeys.Add((AttachableObject)sender);
+
+        CheckKeyConfiguration();
+    }
+
+    private void KeyObj_OnDetached(object sender, AttachmentPoint attachPoint)
+    {
+        // Update combination status
+        this.m_attachedKeys.Remove(sender as AttachableObject);
+
+        CheckKeyConfiguration();
+    }
+
+    private AttachmentPoint GetUnattachedPointOfType(AttachableObject attachedObj, AttachmentType type)
+    {
+        if (attachedObj == null)
+        {
+            Debug.Log("[GetAdjacentAttachmentPoint] Invalid object");
+            return null;
+        }
+
+        foreach (AttachmentPoint point in attachedObj.attachmentPoints)
+        {
+            if (point.attachmentType == type && !point.isAttached)
+            {
+                return point;
+            }
+        }
+
+        return null;
+    }
+
+    private void CheckKeyConfiguration()
+    {
+        const int layerMask = ~((1 << 1) | (1 << 2)); // !TransparentFX layer || IgnoreRaycast Layer
+        const string strLockPrefix = "LockPart";
+        const float keyEpsilon = 0.02069999f;
+
+        // Clear the lock materials
+        foreach (GameObject obj in this.lockObjects)
+        {
+            obj.GetComponentInChildren<MeshRenderer>().material = this.neutralMaterial;
+        }
+
+        // Offset > 3 will ensure KeyPart1 is the first one placed
+        int offset = 4;
+
+        // Check the attached keys
+        for (int i = 1; i <= this.m_attachedKeys.Count; ++i)
+        {
+            string correctKeyName = "KeyPart" + i;
+            AttachableObject attachedKey = this.m_attachedKeys[i - 1];
+            if (attachedKey == null || attachedKey.name != correctKeyName)
+            {
+                continue;
+            }
+
+            GameObject initialLockObj = null;
+            if (i == 1)
+            {
+                foreach (GameObject lockObj in this.lockObjects)
+                {
+                    AttachmentPoint keyAttachment = lockObj.GetComponentInChildren<AttachmentPoint>().attachedPoint;
+                    if (keyAttachment != null && keyAttachment.parentObject == attachedKey)
+                    {
+                        // update offset
+                        offset = int.Parse(lockObj.name.Substring(strLockPrefix.Length)) - 1;
+                        initialLockObj = lockObj;
+
+                        break;
+                    }
+                }
+            }
+
+            // Get the other attachment point
+            AttachmentPoint adjPoint = GetUnattachedPointOfType(attachedKey, AttachmentType.Loop);
+            if (adjPoint == null)
+            {
+                continue;
+            }
+
+            // Project down to see if we hit the correct Lock tile
+            RaycastHit rayHit;
+            if (!Physics.Raycast(adjPoint.transform.position + (Vector3.up * keyEpsilon), Vector3.down, out rayHit, 1.0f, layerMask) ||
+                !rayHit.collider.name.StartsWith(strLockPrefix))
+            {
+                continue;
+            }
+
+            int lockIdx = int.Parse(rayHit.collider.name.Substring(strLockPrefix.Length));
+
+            if (lockIdx == 0 && i == 1 && initialLockObj != null)
+            {
+                initialLockObj.GetComponentInChildren<MeshRenderer>().material = this.successMaterial;
+            }
+            else if (i + offset == lockIdx)
+            {
+                // This is the correct orientation, so update the tile
+                rayHit.collider.GetComponentInChildren<MeshRenderer>().material = this.successMaterial;
+            }
+
         }
     }
 
@@ -69,7 +168,7 @@ public class GameController : MonoBehaviour
             enterARButton.gameObject.SetActive(WebXRManager.Instance.isSupportedAR);
             unsupportedText.SetActive(!WebXRManager.Instance.isSupportedAR);
 
-            enterARButton.onClick.Invoke();
+            //enterARButton.onClick.Invoke();
         }
         catch (Exception ex)
         {
@@ -103,7 +202,7 @@ public class GameController : MonoBehaviour
 
                 if (encodedVal != null && encodedVal.ToUpper() == keyVal.Value)
                 {
-                    this.availableKeys.Add(dirIndex);
+                    this.m_availableKeys.Add(dirIndex);
                 }
 
                 // Set the button color to the 0th element in the query params
@@ -118,7 +217,7 @@ public class GameController : MonoBehaviour
 
     private void Reset()
     {
-        foreach (var key in this.availableKeys)
+        foreach (var key in this.m_availableKeys)
         {
             var keyObj = this.keyObjects[key];
             keyObj.Detach();

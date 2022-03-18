@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,20 +11,23 @@ public enum AttachableObjectState
 
 public class AttachableObject : MonoBehaviour
 {
+    // Other data members
+    private AttachmentPoint m_targetPoint;
+    private AttachmentPoint m_sourcePoint;
+
     // Unity accessible data
     public bool showCollision = false;
     public AttachableObjectState state = AttachableObjectState.Unattached;
     public List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
 
-    // Other data members
-    private AttachmentPoint m_targetPoint;
-    private AttachmentPoint m_sourcePoint;
-    //private Vector3 m_targetPositionDelta;
+    // ⚡Events⚡
+    public event EventHandler<AttachmentPoint> OnAttached;
+    public event EventHandler<AttachmentPoint> OnDetached;
 
     public void Attach()
     {
         // Need something to attach to
-        if (m_targetPoint == null)
+        if (!IsValidAttachment())
         {
             return;
         }
@@ -49,9 +52,14 @@ public class AttachableObject : MonoBehaviour
         Vector3 transformToTarget = m_targetPoint.transform.position - m_sourcePoint.transform.position;
         this.transform.position += transformToTarget;
 
-        //this.transform.position += m_targetPositionDelta + new Vector3(0, this.transform.localScale.y, 0);
-
+        this.m_sourcePoint.Attach(this.m_targetPoint);
+        this.m_targetPoint.Attach(this.m_sourcePoint);
         this.state = AttachableObjectState.Attached;
+
+        if (this.OnAttached != null)
+        {
+            this.OnAttached.Invoke(this, m_sourcePoint);
+        }    
     }
 
     public void Detach()
@@ -65,6 +73,32 @@ public class AttachableObject : MonoBehaviour
             rigidbody.useGravity = true;
             rigidbody.isKinematic = false;
         }
+
+        if (m_sourcePoint != null)
+        {
+            m_sourcePoint.Detach();
+        }
+        if (m_targetPoint != null)
+        {
+            m_targetPoint.Detach();
+        }
+
+        if (this.OnDetached != null)
+        {
+            this.OnDetached.Invoke(this, m_sourcePoint);
+        }
+
+        m_targetPoint = null;
+    }
+
+    private bool IsValidAttachment()
+    {
+        if (m_targetPoint == null || m_sourcePoint == null || m_targetPoint.isAttached)
+        {
+            return false;
+        }
+
+        return m_targetPoint.attachmentType != m_sourcePoint.attachmentType;
     }
 
     private float SnapToRightAngle(float angle)
@@ -118,7 +152,7 @@ public class AttachableObject : MonoBehaviour
     {
         foreach (AttachmentPoint attachmentPoint in attachmentPoints)
         {
-            attachmentPoint.surface = this;
+            attachmentPoint.parentObject = this;
         }
     }
 
