@@ -22,9 +22,10 @@ public class GameController : MonoBehaviour
     };
     private readonly string[] directions = new string[KEY_COUNT] { "w", "s", "e", "n" };
 
-    // Other member data
+    // Private member data
     private List<int> m_availableKeys = new List<int>();
     private List<AttachableObject> m_attachedKeys = new List<AttachableObject>(KEY_COUNT);
+    private Material m_startMaterial = null;
 
     // Unity accessible data
     public string debugQueryString;
@@ -34,9 +35,32 @@ public class GameController : MonoBehaviour
     public List<Material> keyMaterials = new List<Material>(KEY_COUNT);
     public Material successMaterial;
     public Material neutralMaterial;
+    public Material portalMaterial;
     public Transform spawnPoint;
     public Button enterARButton;
     public GameObject unsupportedText;
+
+    // Properties
+    private bool m_isCompleted;
+    public bool isCompleted
+    {
+        get { return m_isCompleted; }
+        private set
+        {
+            if (value != m_isCompleted)
+            {
+                if (value)
+                {
+                    this.buttonMesh.GetComponent<MeshRenderer>().material = this.successMaterial;
+                }
+                else
+                {
+                    this.buttonMesh.GetComponent<MeshRenderer>().material = m_startMaterial;
+                }
+            }
+            m_isCompleted = value;
+        }
+    }
 
     public void OnEnterARClicked()
     {
@@ -102,8 +126,9 @@ public class GameController : MonoBehaviour
             obj.GetComponentInChildren<MeshRenderer>().material = this.neutralMaterial;
         }
 
-        // Offset > 3 will ensure KeyPart1 is the first one placed
-        int offset = 4;
+        // Offset >= KEY_COUNT will ensure KeyPart1 is the first one placed
+        int offset = KEY_COUNT;
+        int correctKeys = 0;
 
         // Check the attached keys
         for (int i = 1; i <= this.m_attachedKeys.Count; ++i)
@@ -148,17 +173,27 @@ public class GameController : MonoBehaviour
             }
 
             int lockIdx = int.Parse(rayHit.collider.name.Substring(strLockPrefix.Length));
+            MeshRenderer lockMesh = null;
 
+            // If this is the correct orientation, then update the tile
             if (lockIdx == 0 && i == 1 && initialLockObj != null)
             {
-                initialLockObj.GetComponentInChildren<MeshRenderer>().material = this.successMaterial;
+                lockMesh = initialLockObj.GetComponentInChildren<MeshRenderer>();
             }
             else if (i + offset == lockIdx || (i + offset) % KEY_COUNT == lockIdx)
             {
-                // This is the correct orientation, so update the tile
-                rayHit.collider.GetComponentInChildren<MeshRenderer>().material = this.successMaterial;
+                lockMesh = rayHit.collider.GetComponentInChildren<MeshRenderer>();
+            }
+
+            if (lockMesh != null)
+            {
+                // We found a matching lock, so the orientation must be correct
+                lockMesh.material = this.successMaterial;
+                ++correctKeys;
             }
         }
+
+        this.isCompleted = correctKeys == KEY_COUNT;
     }
 
     private void Start()
@@ -189,7 +224,6 @@ public class GameController : MonoBehaviour
         Debug.Log(string.Format("Application URL: {0}", queryString));
 
         var queryKeyValueParams = HttpUtility.ParseQueryString(queryString.Substring(queryString.IndexOf('?')));
-        bool matAssigned = false;
         foreach (var keyVal in this.keyParams)
         {
             if (!string.IsNullOrEmpty(queryKeyValueParams.Get(keyVal.Key)))
@@ -204,10 +238,9 @@ public class GameController : MonoBehaviour
                 }
 
                 // Set the button color to the 0th element in the query params
-                if (!matAssigned)
+                if (this.m_startMaterial == null)
                 {
-                    this.buttonMesh.material = this.keyMaterials[dirIndex];
-                    matAssigned = true;
+                    this.buttonMesh.material = this.m_startMaterial = this.keyMaterials[dirIndex];
                 }
             }
         }
@@ -230,6 +263,18 @@ public class GameController : MonoBehaviour
 
     public void OnResetButtonPressed()
     {
-        Reset();
+        if (!this.isCompleted)
+        {
+            Reset();
+        }
+        else
+        {
+            // Win state!
+            foreach (var key in this.m_availableKeys)
+            {
+                var keyObj = this.keyObjects[key];
+                keyObj.GetComponentInChildren<MeshRenderer>().material = this.portalMaterial;
+            }
+        }
     }
 }
